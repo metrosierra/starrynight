@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from astropy.io import astro
+from astropy.io import fits
 import numpy as np
 import sys
 from matplotlib import image
@@ -10,8 +10,9 @@ from matplotlib.ticker import (MultipleLocator, AutoMinorLocator)
 
 import odr_fit as fitting
 import masks
+import photometry as phot
 
-master = astro.open('../A1_mosaic.fits')
+master = fits.open('../../A1_mosaic.fits')
 metadata = master[0].header
 # print(metadata)
 metatxt = open('metadata.txt', 'w')
@@ -55,11 +56,44 @@ def make_hist(image, bins = 2**16):
 
 
 mask1 = del_grays(pixel_data, 3421)
-mask2 = masks.upper_threshold(pixel_data, 5500)
-print(mask2)
+mask2 = masks.upper_threshold(pixel_data, 4500)
 pixel2 = np.multiply(pixel_data, mask2)
+
+right, left, x_perimeter = phot.circle(15)
+
+def iter_blob(image, x_perimeter):
+    radius = len(x_perimeter)
+    hotspots = np.where(image == np.max(image))
+    print(np.max(image))
+    dummy_mask = np.ones(np.shape(image))
+
+    for i in range(len(hotspots[0])):
+        centre = [hotspots[1][i], hotspots[0][i]]
+        x0 = centre[0] - radius
+        x1 = centre[0] + radius
+        dummy_mask[centre[1]][x0 : x1] = 0
+
+        for q in range(0, radius):
+            y = centre[1] + (q + 1)
+            x0 = centre[0] + x_perimeter[q][0]
+            x1 = centre[0] + x_perimeter[q][1]
+            dummy_mask[y][x0 : x1] = 0
+
+            y = centre[1] - (q + 1)
+            dummy_mask[y][x0 : x1] = 0
+
+    return np.multiply(dummy_mask, image)
+
+for i in range(100):
+    pixel2 = iter_blob(pixel2, x_perimeter)
+
+# plt.imshow(pixel2)
+# plt.imshow(pixel3)
+# plt.show()
 plt.imshow(pixel2)
 plt.show()
+
+
 # make_hist(pixel_data)
 #
 # pixel1 = np.multiply(mask1, pixel_data)

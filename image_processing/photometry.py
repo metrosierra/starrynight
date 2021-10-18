@@ -7,14 +7,14 @@ from numba import njit
 
 
 
-def circle(centre, radius):
+def circle(radius):
 
     first_oct = [[], []]
 
-    initial = [centre[0] + radius, centre[1]]
+    initial = [radius, 0]
     next = [0, 0]
     # print(round(centre[1] + radius/np.sqrt(2)))
-    while next[1] < centre[1] + radius/np.sqrt(2) - 1:
+    while next[1] < radius/np.sqrt(2) - 1:
 
         next_x2 = initial[0]**2 - 2*initial[1] - 1
         next_y2 = radius**2 - next_x2
@@ -28,13 +28,12 @@ def circle(centre, radius):
     right_hemi = [list(reversed(first_quad[0])) + first_quad[0], list(reversed(first_quad[1])) + [-1 * i for i in first_quad[1]]]
     left_hemi = [[-1 * i for i in right_hemi[0]], right_hemi[1]]
 
-    return right_hemi, left_hemi
+    y_hemi = [[right_hemi[0][i], right_hemi[1][i]] for i in range(len(right_hemi[0]))]
+    x_values = set([list[0] for list in y_hemi])
+    x_groups = [[list[1] for list in y_hemi if list[0] == value] for value in x_values]
+    x_perimeter = [[min(group), max(group)] for group in x_groups]
+
+    return right_hemi, left_hemi, x_perimeter
 
 
-right_hemi, left_hemi = circle([0, 0], 23)
-print(right_hemi)
-dummy = [[], []]
-# for index, y in right_hemi[1]:
-#
-#     dummy[1].append(y)
-#     if right_hemi[]
+right_hemi, left_hemi, x_perimeter = circle(23)
