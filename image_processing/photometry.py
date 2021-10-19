@@ -6,36 +6,34 @@ import sys
 from numba import njit
 
 
-### sets gray values from left and right edges to 0 (blackest black)
-### outputs a mask
-def del_grays(image, grayvalue):
 
-    mask = np.ones(np.shape(image))
-    for index, line in enumerate(image):
-        if line[0] == grayvalue:
-            mask[index][0] = 0
-            runner = 1
-            while runner < len(line) and line[0+runner] == grayvalue:
-                mask[index][0+runner] = 0
-                runner += 1
+def circle(radius):
 
-        if line[-1] == grayvalue:
-            mask[index][-1] = 0
-            runner = 1
-            while runner < len(line) and line[-(1+runner)] == grayvalue:
-                mask[index][-(1+runner)] = 0
-                runner += 1
-    return mask
+    first_oct = [[], []]
 
-@njit
-def upper_threshold(image, threshold):
+    initial = [radius, 0]
+    next = [0, 0]
+    # print(round(centre[1] + radius/np.sqrt(2)))
+    while next[1] < radius/np.sqrt(2) - 1:
 
-    mask = np.ones(np.shape(image))
-    coordinates = np.where(image > threshold)
-    for i in range(len(coordinates[0])):
+        next_x2 = initial[0]**2 - 2*initial[1] - 1
+        next_y2 = radius**2 - next_x2
+        next = [np.sqrt(next_x2), np.sqrt(next_y2)]
+        # print(next)
+        for i in range(2): first_oct[i].append(round(next[i]))
+        initial = next
 
-        x = coordinates[0][i]
-        y = coordinates[1][i]
-        mask[x][y] = 0
 
-    return mask
+    first_quad = [first_oct[0] + list(reversed(first_oct[1])), first_oct[1] + list(reversed(first_oct[0]))]
+    right_hemi = [list(reversed(first_quad[0])) + first_quad[0], list(reversed(first_quad[1])) + [-1 * i for i in first_quad[1]]]
+    left_hemi = [[-1 * i for i in right_hemi[0]], right_hemi[1]]
+
+    y_hemi = [[right_hemi[0][i], right_hemi[1][i]] for i in range(len(right_hemi[0]))]
+    x_values = set([list[0] for list in y_hemi])
+    x_groups = [[list[1] for list in y_hemi if list[0] == value] for value in x_values]
+    x_perimeter = [[min(group), max(group)] for group in x_groups]
+
+    return right_hemi, left_hemi, x_perimeter
+
+
+right_hemi, left_hemi, x_perimeter = circle(23)
