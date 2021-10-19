@@ -7,9 +7,13 @@ def sharpen_func(pixel, thresWhite, thresBlack):
     return pixel
 
 def sharpen(img, thresWhite, thresBlack):
-    # file object
-    # data
+    """
+    returns a mask that can sharpen the img
 
+    input
+        thresWhite - above which will be set to -1
+        thresBlack - above which will be set to 0
+    """
     mask = np.zeros(np.shape(img))
 
     for i in range(np.shape(img)[0]):
@@ -18,7 +22,7 @@ def sharpen(img, thresWhite, thresBlack):
             if img[i][j] <= thresBlack:
                 mask[i][j] = 0
             elif img[i][j] >= thresWhite:
-                mask[i][j] = 0
+                mask[i][j] = -1
             else:
                 temp = sharpen_func(img[i][j], thresWhite, thresBlack)
                 mask[i][j] = temp / img[i][j]
