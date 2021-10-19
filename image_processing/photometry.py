@@ -35,5 +35,65 @@ def circle(radius):
 
     return right_hemi, left_hemi, x_perimeter
 
+#takes centre as (x, y)
+def linescan(image, centre, sigma):
 
-right_hemi, left_hemi, x_perimeter = circle(23)
+    x0 = centre[0] - sigma
+    x1 = centre[0] + sigma
+    xline_values = image[centre[1], x0 : x1]
+    xline = np.array([i for i in range(x0, x1, 1)])
+
+
+    y0 = centre[1] - sigma
+    y1 = centre[1] + sigma
+    yline_values = image[y0 : y1, centre[0]]
+    yline = np.array([i for i in range(y0, y1, 1)])
+
+    return xline, xline_values, yline, yline_values
+
+def areascan(image, centre, x_perimeter):
+
+    output = []
+    radius = len(x_perimeter)
+    x0 = centre[0] - radius
+    x1 = centre[0] + radius
+    output += list(image[centre[1], x0 : x1])
+    for q in range(0, radius):
+        y = centre[1] + (q + 1)
+        x0 = centre[0] + x_perimeter[q][0]
+        x1 = centre[0] + x_perimeter[q][1]
+        output += list(image[y, x0 : x1])
+
+        y = centre[1] - (q + 1)
+        output += list(image[y, x0 : x1])
+
+    return output
+
+def zero_areascan(image, centre, x_perimeter):
+
+    y_len = len(image)
+    x_len = len(image[0])
+    toggle = False
+    output = []
+    radius = len(x_perimeter)
+    x0 = centre[0] - radius
+    x1 = centre[0] + radius
+    output += list(image[centre[1], x0 : x1])
+    for q in range(0, radius):
+        y = centre[1] + q
+        if y < y_len:
+            x0 = centre[0] + x_perimeter[q][0]
+            x1 = centre[0] + x_perimeter[q][1]
+            output += list(image[y, x0 : x1])
+
+        y = centre[1] - q
+        output += list(image[y, x0 : x1])
+        toggle = 0. in output
+
+        if toggle:
+            break
+
+    return toggle
+
+
+# def value_iterscan(image,)

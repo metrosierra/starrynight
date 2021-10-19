@@ -6,14 +6,9 @@ def sharpen_func(pixel, thresWhite, thresBlack):
     pixel = (pixel - thresBlack) * ((2**16 - 1)/(thresWhite - thresBlack))
     return pixel
 
-def sharpen(filepath, thresWhite, thresBlack):
+def sharpen(img, thresWhite, thresBlack):
     # file object
-    hdulist = fits.open(filepath)
     # data
-    img = hdulist[0].data
-
-    thresWhite = thresWhite
-    thresBlack = thresBlack
 
     mask = np.zeros(np.shape(img))
 

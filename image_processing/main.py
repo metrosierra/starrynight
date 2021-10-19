@@ -11,6 +11,8 @@ from matplotlib.ticker import (MultipleLocator, AutoMinorLocator)
 import odr_fit as fitting
 import masks
 import photometry as phot
+import sharpen as sharp
+
 
 master = fits.open('../../A1_mosaic.fits')
 metadata = master[0].header
@@ -56,43 +58,92 @@ def make_hist(image, bins = 2**16):
 
 
 mask1 = del_grays(pixel_data, 3421)
-mask2 = masks.upper_threshold(pixel_data, 4500)
+mask2 = masks.upper_threshold(pixel_data, 4000)
 pixel2 = np.multiply(pixel_data, mask2)
+mask3 = sharp.sharpen(pixel2, 4000, 3466)
+pixel_ref = pixel2.copy()
 
-right, left, x_perimeter = phot.circle(15)
+pixel4 = np.multiply(pixel2, mask3)
+plt.imshow(pixel4)
+plt.show()
+right_hemi, left_hemi, x_perimeter = phot.circle(8)
+right_hemi1, left_hemi1, x_perimeter_check = phot.circle(15)
 
-def iter_blob(image, x_perimeter):
+catalog = []
+
+def iter_blob(image, x_perimeter, pixel_value):
+
+    chart = image.copy()
     radius = len(x_perimeter)
-    hotspots = np.where(image == np.max(image))
-    print(np.max(image))
-    dummy_mask = np.ones(np.shape(image))
+    hotspots = np.where(image == pixel_value)
 
     for i in range(len(hotspots[0])):
         centre = [hotspots[1][i], hotspots[0][i]]
+        # x0, x1, y0, y1 = phot.linescan(chart, centre, 14)
+        zero_exists = phot.zero_areascan(chart, centre, x_perimeter_check)
+        if zero_exists:
+            continue
+        else:
+            catalog.append(centre)
+
         x0 = centre[0] - radius
         x1 = centre[0] + radius
-        dummy_mask[centre[1]][x0 : x1] = 0
-
-        for q in range(0, radius):
+        chart[centre[1]][x0 : x1] = 0
+        for q in range(0, radius, 1):
             y = centre[1] + (q + 1)
             x0 = centre[0] + x_perimeter[q][0]
             x1 = centre[0] + x_perimeter[q][1]
-            dummy_mask[y][x0 : x1] = 0
+            chart[y-len(image[0])][x0 : x1] = 0
 
             y = centre[1] - (q + 1)
-            dummy_mask[y][x0 : x1] = 0
+            chart[y][x0 : x1] = 0
 
-    return np.multiply(dummy_mask, image)
+    return chart
 
-for i in range(100):
-    pixel2 = iter_blob(pixel2, x_perimeter)
+initial_pix = np.max(pixel2)
+for i in range(600):
+    pixel2 = iter_blob(pixel2, x_perimeter, initial_pix)
+    initial_pix -= 1
+    print(initial_pix)
+
+    if initial_pix < 3466.:
+        break
+
+centres_mask = np.ones(np.shape(pixel2))
+y_len = len(centres_mask)
+x_len = len(centres_mask[0])
+
+for centre in catalog:
+
+    for q in range(len(right_hemi[0])):
+        y = right_hemi[1][q] + centre[1]
+        x = right_hemi[0][q] + centre[0]
+
+        if y < y_len and x < x_len:
+            centres_mask[y][x] = 0.
+
+    for q in range(len(left_hemi[0])):
+        y = left_hemi[1][q] + centre[1]
+        x = left_hemi[0][q] + centre[0]
+
+        if y < y_len and x < x_len:
+            centres_mask[y][x] = 0.
+
+pixel3 = np.multiply(centres_mask, pixel_ref)
+
+# hotspots = np.where(pixel2 == np.max(pixel2))
+# print(hotspots)
+# print(np.max(pixel2), 'hi')
+# x0, x1, y0, y1 = phot.linescan(pixel2, [hotspots[1][0], hotspots[0][0]], 20)
+#
+# plt.plot(x1, x0)
+# plt.plot(x1, y0)
 
 # plt.imshow(pixel2)
 # plt.imshow(pixel3)
 # plt.show()
-plt.imshow(pixel2)
+plt.imshow(pixel3)
 plt.show()
-
 
 # make_hist(pixel_data)
 #
