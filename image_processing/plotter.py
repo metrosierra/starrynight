@@ -33,8 +33,11 @@ def mag_plot(stepsize, filepath):
         y_list.append(count)
 
 
-    plt.plot(x_list, y_list)
-    plt.xlabel("Magnitude")
+    plt.scatter(x_list, y_list)
+    plt.title("Number Count Plot",fontsize=14)
+    plt.xlabel("Magnitude", fontsize=14)
     plt.yscale("log")     #log plot
-    plt.ylabel("log(N)")
+    plt.ylabel("log(N)",fontsize=14)
     plt.show()
+
+mag_plot(stepsize = 10, filepath = "/Users/jiayangzhang/Documents/Imperial/labs/year3/starrynight/image_processing/output/centres.txt")
