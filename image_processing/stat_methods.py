@@ -8,7 +8,7 @@ from scipy.special import gamma
 from scipy.special import erf
 from scipy.odr import *
 from scipy import stats
-
+import numpy as np
 
 def gauss(p, x):
     amp, mean, sigma = p
@@ -62,3 +62,16 @@ def fit(function, x, y, initials, args = None, xerr = 0., yerr = 0.):
 
 
     return output.beta, output.sd_beta, chi_reduced
+
+
+
+### discrete pixel values, 16 bit
+def make_hist(image, bins = 2**16):
+
+    dummy = np.copy(image)
+    dummy = dummy.flatten()
+    dummy = np.sort(dummy)
+    width = 1.
+    counts, edges, stuff = plt.hist(dummy, bins, histtyp = 'step')
+
+    return counts, edges, width

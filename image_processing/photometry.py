@@ -6,7 +6,6 @@ import sys
 from numba import njit
 
 
-
 def circle(radius):
 
     first_oct = [[], []]
@@ -68,13 +67,13 @@ def areascan(image, centre, x_perimeter):
         output += list(image[y, x0 : x1])
 
     return output
-
-def zero_areascan(image, centre, x_perimeter):
+    
+def neg_areascan(image, centre, x_perimeter):
 
     y_len = len(image)
     x_len = len(image[0])
     toggle = False
-    output = []
+    output = [0.]
     radius = len(x_perimeter)
     x0 = centre[0] - radius
     x1 = centre[0] + radius
@@ -88,7 +87,7 @@ def zero_areascan(image, centre, x_perimeter):
 
         y = centre[1] - q
         output += list(image[y, x0 : x1])
-        toggle = 0. in output
+        toggle = np.any(np.array(output) < 0.)
 
         if toggle:
             break

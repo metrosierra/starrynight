@@ -2,10 +2,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 from astropy.io import fits
 
+from numba import njit
+
+@njit
 def sharpen_func(pixel, thresWhite, thresBlack):
     pixel = (pixel - thresBlack) * ((2**16 - 1)/(thresWhite - thresBlack))
     return pixel
 
+@njit
 def sharpen(img, thresWhite, thresBlack):
     """
     returns a mask that can sharpen the img

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-
+#%%%%%%%%%%%%%%%%%%%%
 from astropy.io import fits
 import numpy as np
 import sys
@@ -7,12 +7,14 @@ from matplotlib import image
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FormatStrFormatter
 from matplotlib.ticker import (MultipleLocator, AutoMinorLocator)
+import cv2
+from numba import njit
 
-import odr_fit as fitting
+import stat_methods as fitting
 import masks
 import photometry as phot
 import sharpen as sharp
-
+import isradial
 
 master = fits.open('../../A1_mosaic.fits')
 metadata = master[0].header
@@ -20,29 +22,7 @@ metadata = master[0].header
 metatxt = open('metadata.txt', 'w')
 metatxt.write(str(metadata))
 
-
-pixel_data = master[0].data
-
-### sets gray values from left and right edges to 0 (blackest black)
-### outputs a mask
-def del_grays(image, grayvalue):
-
-    mask = np.ones(np.shape(image))
-    for index, line in enumerate(image):
-        if line[0] == grayvalue:
-            mask[index][0] = 0
-            runner = 1
-            while runner < len(line) and line[0+runner] == grayvalue:
-                mask[index][0+runner] = 0
-                runner += 1
-
-        if line[-1] == grayvalue:
-            mask[index][-1] = 0
-            runner = 1
-            while runner < len(line) and line[-(1+runner)] == grayvalue:
-                mask[index][-(1+runner)] = 0
-                runner += 1
-    return mask
+hi = 'HAI!!!'
 
 
 ### discrete pixel values, 16 bit
@@ -52,67 +32,95 @@ def make_hist(image, bins = 2**16):
     dummy = dummy.flatten()
     dummy = np.sort(dummy)
     width = 1.
-    counts, edges, stuff = plt.hist(dummy, bins, histtype='step')
+    counts, edges, stuff = plt.hist(dummy, bins, histtyp = 'step')
 
     return counts, edges, width
 
 
-mask1 = del_grays(pixel_data, 3421)
-mask2 = masks.upper_threshold(pixel_data, 4000)
-pixel2 = np.multiply(pixel_data, mask2)
+
+pixel_data = master[0].data
+
+# pixel_data = pixel_data[0: 1960, 20:1000]
+# mask1 = masks.del_grays(pixel_data, 3421)
+# mask2 = masks.upper_threshold(pixel_data, 4000)
+pixel2 = pixel_data
+
 mask3 = sharp.sharpen(pixel2, 4000, 3466)
+
+pixel2 = np.round(np.multiply(pixel2, mask3))
 pixel_ref = pixel2.copy()
 
-pixel4 = np.multiply(pixel2, mask3)
-plt.imshow(pixel4)
+plt.imshow(pixel2)
 plt.show()
 right_hemi, left_hemi, x_perimeter = phot.circle(8)
-right_hemi1, left_hemi1, x_perimeter_check = phot.circle(15)
+right_hemi1, left_hemi1, x_perimeter_check = phot.circle(8)
 
 catalog = []
 
-def iter_blob(image, x_perimeter, pixel_value):
+def iter_blob(chart, x_perimeter, iterations):
 
-    chart = image.copy()
+    xlen = len(chart[0])
+    ylen = len(chart)
     radius = len(x_perimeter)
-    hotspots = np.where(image == pixel_value)
 
-    for i in range(len(hotspots[0])):
-        centre = [hotspots[1][i], hotspots[0][i]]
-        # x0, x1, y0, y1 = phot.linescan(chart, centre, 14)
-        zero_exists = phot.zero_areascan(chart, centre, x_perimeter_check)
-        if zero_exists:
-            continue
-        else:
-            catalog.append(centre)
+    for run in range(iterations):
+        print(run)
+        print(np.shape(chart))
+        pixel_value = np.max(chart)
+        hotspots = np.where(chart == pixel_value)
+        for i in range(len(hotspots[0])):
+            centre = [hotspots[1][i], hotspots[0][i]]
+            neg_exists = phot.neg_areascan(chart, centre, x_perimeter_check)
+            if not neg_exists:
+                norm_test1, norm_test2 = isradial.test_band(chart, centre, radius, 1)
+                if len(norm_test1) > 1 and len(norm_test2) > 1:
+                    # print(norm_test1, norm_test2)
+                    xfit = np.linspace(0, 1, len(norm_test2))
+                    plt.plot(xfit, norm_test2)
+                    plt.show()
+                    is_normal1 = isradial.normalTest(norm_test1, 0.05)
+                    is_normal2 = isradial.normalTest(norm_test2, 0.05)
+                    print(isradial.quartile_test(norm_test1, 0.5), 'hi!')
+                    print(isradial.quartile_test(norm_test2, 0.5),'hi2!')
+                    catalog.append(centre)
 
-        x0 = centre[0] - radius
-        x1 = centre[0] + radius
-        chart[centre[1]][x0 : x1] = 0
-        for q in range(0, radius, 1):
-            y = centre[1] + (q + 1)
-            x0 = centre[0] + x_perimeter[q][0]
-            x1 = centre[0] + x_perimeter[q][1]
-            chart[y-len(image[0])][x0 : x1] = 0
+            x0 = centre[0] - radius
+            x1 = centre[0] + radius
 
-            y = centre[1] - (q + 1)
-            chart[y][x0 : x1] = 0
+            if x0 < 0.: x0 = 0
+            if x1 > xlen: x1 = xlen
+            # print(x0, x1, centre[1], hi)
+            chart[centre[1]][x0 : x1] = -1.
+            for q in range(0, radius, 1):
+                y = centre[1] + (q + 1)
+                if y >= ylen:
+                    y = ylen - 1
+
+                x0 = centre[0] + x_perimeter[q][0]
+                x1 = centre[0] + x_perimeter[q][1]
+                if x0 < 0.: x0 = 0
+                if x1 > xlen: x1 = xlen
+
+                chart[y][x0 : x1] = -1.
+
+                y = centre[1] - (q + 1)
+                if y < 0.: y = 0
+
+                chart[y][x0 : x1] = -1.
 
     return chart
 
-initial_pix = np.max(pixel2)
-for i in range(600):
-    pixel2 = iter_blob(pixel2, x_perimeter, initial_pix)
-    initial_pix -= 1
-    print(initial_pix)
+pixel2 = iter_blob(pixel2, x_perimeter, iterations = 500)
 
-    if initial_pix < 3466.:
-        break
 
-centres_mask = np.ones(np.shape(pixel2))
+#%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+centres_mask = np.zeros(np.shape(pixel2))
 y_len = len(centres_mask)
 x_len = len(centres_mask[0])
-
+print(catalog)
 for centre in catalog:
 
     for q in range(len(right_hemi[0])):
@@ -120,28 +128,23 @@ for centre in catalog:
         x = right_hemi[0][q] + centre[0]
 
         if y < y_len and x < x_len:
-            centres_mask[y][x] = 0.
+            centres_mask[y][x] = 2**16 - pixel2[y][x]
 
     for q in range(len(left_hemi[0])):
         y = left_hemi[1][q] + centre[1]
         x = left_hemi[0][q] + centre[0]
 
         if y < y_len and x < x_len:
-            centres_mask[y][x] = 0.
+            centres_mask[y][x] = 2**16 - pixel2[y][x]
 
-pixel3 = np.multiply(centres_mask, pixel_ref)
-
-# hotspots = np.where(pixel2 == np.max(pixel2))
-# print(hotspots)
-# print(np.max(pixel2), 'hi')
-# x0, x1, y0, y1 = phot.linescan(pixel2, [hotspots[1][0], hotspots[0][0]], 20)
-#
-# plt.plot(x1, x0)
-# plt.plot(x1, y0)
-
+# negs = np.where(pixel2 < 0.)
+# for i in range(len(negs[0])):
+#     pixel2[negs[0][i]][negs[1][i]] = 0.
 # plt.imshow(pixel2)
-# plt.imshow(pixel3)
 # plt.show()
+
+pixel3 = np.add(centres_mask, pixel_ref)
+cv2.imwrite('../../test1.png', pixel3)
 plt.imshow(pixel3)
 plt.show()
 
