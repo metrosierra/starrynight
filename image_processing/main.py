@@ -22,8 +22,6 @@ metadata = master[0].header
 metatxt = open('metadata.txt', 'w')
 metatxt.write(str(metadata))
 
-hi = 'HAI!!!'
-
 
 ### discrete pixel values, 16 bit
 def make_hist(image, bins = 2**16):
@@ -65,7 +63,6 @@ def iter_blob(chart, x_perimeter, iterations):
 
     for run in range(iterations):
         print(run)
-        print(np.shape(chart))
         pixel_value = np.max(chart)
         hotspots = np.where(chart == pixel_value)
         for i in range(len(hotspots[0])):
@@ -76,13 +73,15 @@ def iter_blob(chart, x_perimeter, iterations):
                 if len(norm_test1) > 1 and len(norm_test2) > 1:
                     # print(norm_test1, norm_test2)
                     xfit = np.linspace(0, 1, len(norm_test2))
-                    plt.plot(xfit, norm_test2)
-                    plt.show()
+                    # plt.plot(xfit, norm_test2)
+                    # plt.show()
                     is_normal1 = isradial.normalTest(norm_test1, 0.05)
                     is_normal2 = isradial.normalTest(norm_test2, 0.05)
-                    print(isradial.quartile_test(norm_test1, 0.5), 'hi!')
-                    print(isradial.quartile_test(norm_test2, 0.5),'hi2!')
-                    catalog.append(centre)
+                    isradial1 = isradial.quartile_test(norm_test1, 0.5)
+                    isradial2 = isradial.quartile_test(norm_test2, 0.5)
+
+                    if isradial1 or isradial2:
+                        catalog.append(centre)
 
             x0 = centre[0] - radius
             x1 = centre[0] + radius
@@ -112,6 +111,7 @@ def iter_blob(chart, x_perimeter, iterations):
 
 pixel2 = iter_blob(pixel2, x_perimeter, iterations = 500)
 
+np.savetxt('output/centres.txt', np.c_[catalog], delimiter = '\t')
 
 #%%%%%%%%%%%%%%%%%%%%%%
 
@@ -137,71 +137,7 @@ for centre in catalog:
         if y < y_len and x < x_len:
             centres_mask[y][x] = 2**16 - pixel2[y][x]
 
-# negs = np.where(pixel2 < 0.)
-# for i in range(len(negs[0])):
-#     pixel2[negs[0][i]][negs[1][i]] = 0.
-# plt.imshow(pixel2)
-# plt.show()
-
 pixel3 = np.add(centres_mask, pixel_ref)
 cv2.imwrite('../../test1.png', pixel3)
 plt.imshow(pixel3)
 plt.show()
-
-# make_hist(pixel_data)
-#
-# pixel1 = np.multiply(mask1, pixel_data)
-#
-# histy, edges, width = make_hist(pixel1, 2**16)
-# histx = edges + width/2.
-# # ### fit skewed gaussian
-# domain = [np.where(histx > 3350)[0][0], np.where(histx < 3600)[0][-1]]
-# start = domain[0]
-# stop = domain[1]
-#
-# histx_fit = histx[start:stop]
-# histy_fit = histy[start:stop]
-#
-# peak_index = np.where(histy_fit == np.max(histy_fit))[0][0]
-# mean_guess = histx_fit[peak_index]
-# print(mean_guess)
-# sigma_guess = peak_widths(histy_fit, [peak_index])[0][0]
-# print(sigma_guess)
-# skew_guess = 1.1
-# amp_guess = np.max(histy_fit)
-# print(amp_guess)
-# histx_fit = histx_fit[0:peak_index + 10]
-# histy_fit = histy_fit[0:peak_index + 10]
-#
-#
-# # fit_output = fit(skewgauss, histx_fit, histy_fit, initials = [amp_guess, mean_guess, sigma_guess, skew_guess], args = None, xerr = None, yerr = None)
-#
-# # fit_output = fit(lorentzian, histx_fit, histy_fit, initials = [amp_guess, 3400, sigma_guess], args = None, xerr = None, yerr = None)
-# # fit_output = fit(pearson_iv, histx_fit, histy_fit, initials = [amp_guess, 100, 2., 1.5, mean_guess], args = None, xerr = None, yerr = None)
-# fit_output = fit(gauss, histx_fit, histy_fit, initials = [amp_guess, mean_guess, sigma_guess/5.4], args = None, xerr = None, yerr = np.sqrt(histy_fit))
-#
-# #%%%%%%%%%%%%%%
-#
-#     # amp, alpha, m, v, lam = p
-#
-#
-#
-# xfit = np.linspace(histx_fit[0], histx_fit[-1], 1000)
-# yfit = gauss(fit_output[0], xfit)
-# # yfit = lorentzian([amp_guess, mean_guess, sigma_guess/3], xfit)
-#
-# # yfit = skewgauss([amp_guess/2., mean_guess, sigma_guess, 10], xfit)
-# # yfit = lorentzian(fit_output[0], xfit)
-# # yfit = lorentzian([amp_guess, mean_guess, sigma_guess/2.6], xfit)
-# # yfit = pearson_iv([amp_guess, 1., 0.5, 0., mean_guess], xfit)
-# # yfit = pearson_iv(fit_output[0], xfit)
-#
-#
-# plt.grid(which = 'both')
-#
-# plt.plot(xfit, yfit)
-# # plt.ylim([0, np.max(histy_fit)])
-# plt.xlim([3000, 4000])
-# plt.xlabel('Pixel Values', fontsize = 14)
-# plt.ylabel('Bin Count', fontsize = 14)
-# plt.show()

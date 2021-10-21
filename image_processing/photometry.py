@@ -67,7 +67,12 @@ def areascan(image, centre, x_perimeter):
         output += list(image[y, x0 : x1])
 
     return output
-    
+
+
+
+
+
+
 def neg_areascan(image, centre, x_perimeter):
 
     y_len = len(image)
