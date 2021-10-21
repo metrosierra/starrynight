@@ -39,5 +39,3 @@ def mag_plot(stepsize, filepath):
     plt.yscale("log")     #log plot
     plt.ylabel("log(N)",fontsize=14)
     plt.show()
-
-mag_plot(stepsize = 10, filepath = "/Users/jiayangzhang/Documents/Imperial/labs/year3/starrynight/image_processing/output/centres.txt")
