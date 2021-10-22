@@ -1,24 +1,28 @@
 import numpy as np
 def calibration(counts):
     """
-    returns calibrated magnitude, which is the flux of the object
+    returns calibrated instrumental magnitude
 
     input
         pixel counts of one object
 
     output
-        calibrated magitude, i.e. the flux
+        calibrated magitude
 
 
     the instumental zero point MAGZPT is:
     MAGZPT = 2.530E+01 / Photometric ZP (mags) for default extinction
     """
+
+
+
 #     convert counts into instrumental magnitudes
     magnitude = -2.5 * np.log10(counts)
+
 #     convert instumental magnitudes to calibrated magnitudes
     MAGZPT = 2.530E+01
     magnitude = MAGZPT + magnitude
-
+    print(magnitude)
     return magnitude
 
 
