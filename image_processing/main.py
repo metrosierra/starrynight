@@ -14,7 +14,7 @@ import stat_methods as fitting
 import masks
 import photometry as phot
 import sharpen as sharp
-import isradial
+
 
 master = fits.open('../../A1_mosaic.fits')
 metadata = master[0].header
@@ -37,16 +37,23 @@ def make_hist(image, bins = 2**16):
 
 
 pixel_data = master[0].data
+#%%%%%%%%%%%%%%%%%%%%%%
 
-# pixel_data = pixel_data[0: 1960, 20:1000]
+centre_offset = [218, 222]
+pixel2 = pixel_data[centre_offset[1]: 4422, centre_offset[0]:2364]
 # mask1 = masks.del_grays(pixel_data, 3421)
 # mask2 = masks.upper_threshold(pixel_data, 4000)
-pixel2 = pixel_data
+# pixel2 = pixel_data
 
 mask3 = sharp.sharpen(pixel2, 4000, 3466)
 
 pixel2 = np.round(np.multiply(pixel2, mask3))
-pixel_ref = pixel2.copy()
+
+mask_ref = sharp.sharpen(pixel_data, 4000, 3466)
+pixel_ref = np.round(np.multiply(pixel_data, mask_ref))
+
+
+cv2.imwrite('../../test0.png', pixel2)
 
 plt.imshow(pixel2)
 plt.show()
@@ -67,21 +74,9 @@ def iter_blob(chart, x_perimeter, iterations):
         hotspots = np.where(chart == pixel_value)
         for i in range(len(hotspots[0])):
             centre = [hotspots[1][i], hotspots[0][i]]
-            neg_exists = phot.neg_areascan(chart, centre, x_perimeter_check)
-            if not neg_exists:
-                norm_test1, norm_test2 = isradial.test_band(chart, centre, radius, 1)
-                if len(norm_test1) > 1 and len(norm_test2) > 1:
-                    # print(norm_test1, norm_test2)
-                    xfit = np.linspace(0, 1, len(norm_test2))
-                    # plt.plot(xfit, norm_test2)
-                    # plt.show()
-                    is_normal1 = isradial.normalTest(norm_test1, 0.05)
-                    is_normal2 = isradial.normalTest(norm_test2, 0.05)
-                    isradial1 = isradial.quartile_test(norm_test1, 0.5)
-                    isradial2 = isradial.quartile_test(norm_test2, 0.5)
 
-                    if isradial1 or isradial2:
-                        catalog.append(centre)
+            if phot.ischosen(chart, centre, round(radius * 1.5), x_perimeter_check):
+                catalog.append([centre[0] + centre_offset[0], centre[1] + centre_offset[1]])
 
             x0 = centre[0] - radius
             x1 = centre[0] + radius
@@ -92,8 +87,7 @@ def iter_blob(chart, x_perimeter, iterations):
             chart[centre[1]][x0 : x1] = -1.
             for q in range(0, radius, 1):
                 y = centre[1] + (q + 1)
-                if y >= ylen:
-                    y = ylen - 1
+                if y >= ylen: y = ylen - 1
 
                 x0 = centre[0] + x_perimeter[q][0]
                 x1 = centre[0] + x_perimeter[q][1]
@@ -114,28 +108,41 @@ pixel2 = iter_blob(pixel2, x_perimeter, iterations = 500)
 np.savetxt('output/centres.txt', np.c_[catalog], delimiter = '\t')
 
 #%%%%%%%%%%%%%%%%%%%%%%
+import photometry as phot
+right_hemi, left_hemi, flux_peri = phot.circle(8)
+right_hemi, left_hemi, noise_peri = phot.circle(12)
+
+centre_list = np.loadtxt('output/centres.txt', delimiter = '\t')
+centre_list = centre_list.astype(int)
+fluxes = []
+for index, centre in enumerate(centre_list):
+    print(centre)
+    realflux, error = phot.fluxscan(pixel_data, centre, flux_peri, noise_peri)
+
+    catalog[index].append(realflux)
+np.savetxt('output/flux_catalog.txt', np.c_[catalog], delimiter = '\t')
+
+#%%%%%%%%%%%%%%%%%%%%%%
 
 
-
-centres_mask = np.zeros(np.shape(pixel2))
+centres_mask = np.zeros(np.shape(pixel_ref))
 y_len = len(centres_mask)
 x_len = len(centres_mask[0])
 print(catalog)
 for centre in catalog:
-
     for q in range(len(right_hemi[0])):
         y = right_hemi[1][q] + centre[1]
         x = right_hemi[0][q] + centre[0]
 
         if y < y_len and x < x_len:
-            centres_mask[y][x] = 2**16 - pixel2[y][x]
+            centres_mask[y][x] = 2**16 - pixel_ref[y][x]
 
     for q in range(len(left_hemi[0])):
         y = left_hemi[1][q] + centre[1]
         x = left_hemi[0][q] + centre[0]
 
         if y < y_len and x < x_len:
-            centres_mask[y][x] = 2**16 - pixel2[y][x]
+            centres_mask[y][x] = 2**16 - pixel_ref[y][x]
 
 pixel3 = np.add(centres_mask, pixel_ref)
 cv2.imwrite('../../test1.png', pixel3)

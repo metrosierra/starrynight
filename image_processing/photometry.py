@@ -4,7 +4,8 @@ import numpy as np
 import sys
 
 from numba import njit
-
+import matplotlib.pyplot as plt
+import isradial
 
 def circle(radius):
 
@@ -68,8 +69,78 @@ def areascan(image, centre, x_perimeter):
 
     return output
 
+def ischosen(image, centre, noise_radius, x_perimeter_check):
+
+    ischosen = False
+
+    neg_exists = neg_areascan(image, centre, x_perimeter_check)
+    if neg_exists:
+        return ischosen
+
+    else:
+
+        norm_test1, norm_test2 = isradial.test_band(image, centre, noise_radius, 1)
+        if len(norm_test1) > 1 and len(norm_test2) > 1:
+            isradial_threshold = 0.5
+            isradial1 = isradial.quartile_test(norm_test1, isradial_threshold)
+            isradial2 = isradial.quartile_test(norm_test2, isradial_threshold)
+
+            if isradial1 or isradial2:
+                ischosen = True
+
+        return ischosen
 
 
+### noise compensated as well
+def fluxscan(image, centre, sig_perimeter, noise_perimeter):
+
+    xlen = len(image[0])
+    ylen = len(image)
+
+    sig_radius = sig_perimeter[0][1]
+    noise_radius = noise_perimeter[0][1]
+
+    x0 = centre[0] - sig_radius
+    x1 = centre[0] + sig_radius
+
+    rawflux = np.array([])
+    rawflux  = np.append(rawflux, image[centre[1], x0:x1])
+
+    q0 = centre[0] - noise_radius
+    q1 = centre[0] + noise_radius
+    if q1 >= ylen: q0 = ylen - 1
+
+    rawnoise = np.array([])
+    rawnoise = np.append(rawnoise, image[centre[1], q0:x0])
+    rawnoise = np.append(rawnoise, image[centre[1], x1:q1])
+    for y in range(1, noise_radius):
+        y0 = centre[1] + y
+        y1 = centre[1] - y
+
+        q0 = noise_perimeter[y][0] + centre[0]
+        q1 = noise_perimeter[y][1] + centre[0]
+
+        if y < sig_radius:
+            x0 = sig_perimeter[y][0] + centre[0]
+            x1 = sig_perimeter[y][1] + centre[0]
+            print(x0, x1)
+            for ytemp in [y0, y1]:
+                rawflux  = np.append(rawflux, image[ytemp, x0:x1])
+                rawnoise = np.append(rawnoise, image[ytemp, q0:x0])
+                rawnoise = np.append(rawnoise, image[ytemp, x1:q1])
+
+        elif y >= sig_radius:
+            for ytemp in [y0, y1]:
+                rawnoise = np.append(rawnoise, image[ytemp, q0:q1])
+
+    totalflux = np.sum(rawflux)
+    scaled_noise = np.sum(rawnoise)/len(rawnoise) * len(rawflux)
+    realflux = totalflux - scaled_noise
+    error = np.std(rawnoise)/np.sum(rawnoise) * scaled_noise
+
+    # counts, edges, stuff = plt.hist(rawnoise, bins = len(rawnoise))
+    # plt.show()
+    return realflux, error
 
 
 
