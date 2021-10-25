@@ -45,11 +45,11 @@ pixel2 = pixel_data[centre_offset[1]: 4422, centre_offset[0]:2364]
 # mask2 = masks.upper_threshold(pixel_data, 4000)
 # pixel2 = pixel_data
 
-mask3 = sharp.sharpen(pixel2, 6000, 3430)
+mask3 = sharp.sharpen(pixel2, 6500, 3420)
 
 pixel2 = np.round(np.multiply(pixel2, mask3))
 
-mask_ref = sharp.sharpen(pixel_data, 6000, 3430)
+mask_ref = sharp.sharpen(pixel_data, 6500, 3420)
 pixel_ref = np.round(np.multiply(pixel_data, mask_ref))
 
 
@@ -57,8 +57,8 @@ cv2.imwrite('../../test0.png', pixel2)
 
 # plt.imshow(pixel2)
 # plt.show()
-right_hemi, left_hemi, x_perimeter = phot.circle(8)
-right_hemi1, left_hemi1, x_perimeter_check = phot.circle(8)
+right_hemi, left_hemi, x_perimeter = phot.circle(6)
+right_hemi1, left_hemi1, x_perimeter_check = phot.circle(6)
 
 
 @njit
@@ -116,8 +116,8 @@ pixel2, catalog, rejected = iter_blob(pixel2, x_perimeter, iterations = 2000)
 np.savetxt('output/centres.txt', np.c_[catalog], delimiter = '\t')
 
 #%%%%%%%%%%%%%%%%%%%%%%
-right_hemi, left_hemi, flux_peri = phot.circle(8)
-right_hemi, left_hemi, noise_peri = phot.circle(12)
+right_hemi, left_hemi, flux_peri = phot.circle(6)
+right_hemi, left_hemi, noise_peri = phot.circle(9)
 
 centre_list = np.loadtxt('output/centres.txt', delimiter = '\t')
 centre_list = centre_list.astype(int)

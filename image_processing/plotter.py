@@ -24,10 +24,21 @@ def mag_plot(mag_list, num):
 
     y_list = np.array(y_list)
 
-    plt.scatter(x_list, y_list)
+    xstart = np.where(x_list > 15.)[0][0]
+    xend = np.where(x_list < 18.)[0][-1]
+
+    print(xstart, xend)
+    gradient_check = (np.log(y_list[xend]) - np.log(y_list[xstart])) / (x_list[xend] - x_list[xstart])
+    intercept = np.log(y_list[xstart]) - gradient_check * x_list[xstart]
+    print(gradient_check)
+
+    xline = x_list[xstart: xend]
+    yline = xline * gradient_check + intercept
+    plt.plot(xline, yline, 'r-')
+    plt.scatter(x_list, np.log(y_list))
     plt.title("Number Count Plot",fontsize=14)
     plt.xlabel("Magnitude", fontsize=14)
     plt.ylabel("log(N)",fontsize=14)
-    plt.yscale("log")
+    # plt.yscale("log")
     plt.savefig("output/numberCounts.png")
     plt.show()
