@@ -42,7 +42,7 @@ def quartile_test(testData, threshold):
     quart_index = round(len(testData)/4)
     flat_value = np.sum(testData[:quart_index]) + np.sum(testData[-1:-quart_index])
     peak_value = np.sum(testData[quart_index: quart_index*3])
-    if flat_value/peak_value < threshold:
+    if (peak_value - flat_value)/peak_value > threshold:
         return True
 
     else:

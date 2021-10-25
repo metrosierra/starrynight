@@ -65,6 +65,7 @@ right_hemi1, left_hemi1, x_perimeter_check = phot.circle(8)
 def iter_blob(chart, x_perimeter, iterations):
 
     catalog = []
+    rejected = 0
     xlen = len(chart[0])
     ylen = len(chart)
     radius = len(x_perimeter)
@@ -80,6 +81,9 @@ def iter_blob(chart, x_perimeter, iterations):
 
             if phot.ischosen(chart, centre, round(radius * 1.5), x_perimeter_check):
                 catalog.append([centre[0] + centre_offset[0], centre[1] + centre_offset[1]])
+
+            else:
+                rejected += 1
 
             x0 = centre[0] - radius
             x1 = centre[0] + radius
@@ -104,10 +108,10 @@ def iter_blob(chart, x_perimeter, iterations):
 
                 chart[y][x0 : x1] = -1.
 
-    return chart, catalog
+    return chart, catalog, rejected
 
 
-pixel2, catalog = iter_blob(pixel2, x_perimeter, iterations = 2000)
+pixel2, catalog, rejected = iter_blob(pixel2, x_perimeter, iterations = 2000)
 
 np.savetxt('output/centres.txt', np.c_[catalog], delimiter = '\t')
 
@@ -149,6 +153,7 @@ for centre in catalog:
 
 pixel3 = np.add(centres_mask, pixel_ref)
 print('DETECTED OBJECTS:', len(catalog))
+print('REJECTED OBJECTS:', rejected)
 cv2.imwrite('../../test1.png', pixel3)
 plt.imshow(pixel3)
 plt.show()
