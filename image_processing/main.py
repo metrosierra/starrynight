@@ -39,38 +39,41 @@ def make_hist(image, bins = 2**16):
 pixel_data = master[0].data
 #%%%%%%%%%%%%%%%%%%%%%%
 
-centre_offset = [218, 222]
+centre_offset = np.array([218, 222])
 pixel2 = pixel_data[centre_offset[1]: 4422, centre_offset[0]:2364]
 # mask1 = masks.del_grays(pixel_data, 3421)
 # mask2 = masks.upper_threshold(pixel_data, 4000)
 # pixel2 = pixel_data
 
-mask3 = sharp.sharpen(pixel2, 4000, 3466)
+mask3 = sharp.sharpen(pixel2, 6000, 3430)
 
 pixel2 = np.round(np.multiply(pixel2, mask3))
 
-mask_ref = sharp.sharpen(pixel_data, 4000, 3466)
+mask_ref = sharp.sharpen(pixel_data, 6000, 3430)
 pixel_ref = np.round(np.multiply(pixel_data, mask_ref))
 
 
 cv2.imwrite('../../test0.png', pixel2)
 
-plt.imshow(pixel2)
-plt.show()
+# plt.imshow(pixel2)
+# plt.show()
 right_hemi, left_hemi, x_perimeter = phot.circle(8)
 right_hemi1, left_hemi1, x_perimeter_check = phot.circle(8)
 
-catalog = []
 
+@njit
 def iter_blob(chart, x_perimeter, iterations):
 
+    catalog = []
     xlen = len(chart[0])
     ylen = len(chart)
     radius = len(x_perimeter)
 
     for run in range(iterations):
-        print(run)
+        print('Cycle', run)
         pixel_value = np.max(chart)
+
+        if pixel_value == 0.: break
         hotspots = np.where(chart == pixel_value)
         for i in range(len(hotspots[0])):
             centre = [hotspots[1][i], hotspots[0][i]]
@@ -101,14 +104,14 @@ def iter_blob(chart, x_perimeter, iterations):
 
                 chart[y][x0 : x1] = -1.
 
-    return chart
+    return chart, catalog
 
-pixel2 = iter_blob(pixel2, x_perimeter, iterations = 500)
+
+pixel2, catalog = iter_blob(pixel2, x_perimeter, iterations = 2000)
 
 np.savetxt('output/centres.txt', np.c_[catalog], delimiter = '\t')
 
 #%%%%%%%%%%%%%%%%%%%%%%
-import photometry as phot
 right_hemi, left_hemi, flux_peri = phot.circle(8)
 right_hemi, left_hemi, noise_peri = phot.circle(12)
 
@@ -116,7 +119,7 @@ centre_list = np.loadtxt('output/centres.txt', delimiter = '\t')
 centre_list = centre_list.astype(int)
 fluxes = []
 for index, centre in enumerate(centre_list):
-    print(centre)
+    # print(centre)
     realflux, error = phot.fluxscan(pixel_data, centre, flux_peri, noise_peri)
 
     catalog[index].append(realflux)
@@ -128,7 +131,7 @@ np.savetxt('output/flux_catalog.txt', np.c_[catalog], delimiter = '\t')
 centres_mask = np.zeros(np.shape(pixel_ref))
 y_len = len(centres_mask)
 x_len = len(centres_mask[0])
-print(catalog)
+# print(catalog)
 for centre in catalog:
     for q in range(len(right_hemi[0])):
         y = right_hemi[1][q] + centre[1]
@@ -145,6 +148,9 @@ for centre in catalog:
             centres_mask[y][x] = 2**16 - pixel_ref[y][x]
 
 pixel3 = np.add(centres_mask, pixel_ref)
+print('DETECTED OBJECTS:', len(catalog))
 cv2.imwrite('../../test1.png', pixel3)
 plt.imshow(pixel3)
 plt.show()
+
+import main02

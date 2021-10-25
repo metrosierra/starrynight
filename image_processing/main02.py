@@ -1,8 +1,10 @@
+#!/usr/bin/env python3
+
 import numpy as np
 import calibration
 import plotter
 
-data = np.loadtxt("/Users/jiayangzhang/Documents/Imperial/labs/year3/starrynight/image_processing/output/flux_catalog.txt", skiprows=1, delimiter='\t')
+data = np.loadtxt("output/flux_catalog.txt", skiprows=1, delimiter='\t')
 
 flux_list = []
 for index, row in enumerate(data):

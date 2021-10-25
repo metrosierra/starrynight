@@ -22,7 +22,6 @@ def calibration(counts):
 #     convert instumental magnitudes to calibrated magnitudes
     MAGZPT = 2.530E+01
     magnitude = MAGZPT + magnitude
-    print(magnitude)
     return magnitude
 
 
