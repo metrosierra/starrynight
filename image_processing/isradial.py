@@ -77,3 +77,17 @@ def test_band(image, centre, radius, band_radius):
         norm_test2 = np.array([0.])
 
     return norm_test1, norm_test2
+
+def slant_radial(image, centre, length, angle):
+
+    x = np.arange(0, length)
+    y = np.round(np.tan(np.deg2rad(angle)) * x).astype(int)
+
+    x += centre[0]
+    y += centre[1]
+
+    data = []
+    for i in range(len(x)):
+        data.append(np.sum(image[y[i] - 1 : y[i] + 1, x[i]]))
+
+    return x, np.array(data)

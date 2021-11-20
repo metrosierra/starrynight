@@ -10,11 +10,15 @@ from scipy.odr import *
 from scipy import stats
 import numpy as np
 
+def linear(p, x):
+    m, c = p
+    return m*x + c
+
 def gauss(p, x):
-    amp, mean, sigma = p
-    spread = np.exp((-(x - mean) ** 2.0) / (2 * sigma ** 2.0))
+    amp, mean, var, offset = p
+    spread = np.exp((-(x - mean) ** 2.0) / (2 * var))
     #skewness = (1 + erf((skew * (x - mean)) / (sigma * np.sqrt(2))))
-    return amp * spread
+    return amp * spread + offset
 
 def skewgauss(p, x):
     amp, mean, sigma, skew = p
@@ -34,12 +38,12 @@ def pearson_iv(p, x):
     return amp / alpha * ((1 + (x - lam2)/alpha)**(2.))**(-m) * np.exp(-v * np.arctan((x - lam2)/alpha))
 
 
-def fit(function, x, y, initials, args = None, xerr = 0., yerr = 0.):
+def fit(function, x, y, initials, args = None, yerr = 0.):
 
     # Create a scipy Model object
     model = Model(function, extra_args = args)
     # Create a RealData object using our initiated data from above. basically declaring all our variables using the RealData command which the scipy package wants
-    input = RealData(x, y, sx = xerr, sy = yerr)
+    input = RealData(x, y, sy = yerr)
     # Set up ODR with the model and data. ODR is orthogonal distance regression (need to google!)
     odr = ODR(input, model, beta0 = initials)
 
@@ -51,15 +55,14 @@ def fit(function, x, y, initials, args = None, xerr = 0., yerr = 0.):
     print('\nFitted parameters = ', output.beta)
     print('\nError of parameters =', output.sd_beta)
 
-    if xerr is not 0. or yerr is not 0.:
+    if yerr is not 0.:
         #now we can calculate chi-square (if you included errors for fitting, if not it's meaningless)
-        chisquare = np.sum((y - function(output.beta, x, args))**2/(yerr**2 + xerr**2))
+        chisquare = np.sum((y - function(output.beta, x))**2/(yerr**2))
         chi_reduced = chisquare / (len(x) - len(initials))
-        print('\nReduced Chisquare = ', chi_reduced, 'with ',  len(x) - len(initials), 'Degrees of Freedom')
+        # print('\nReduced Chisquare = ', chi_reduced, 'with ',  len(x) - len(initials), 'Degrees of Freedom')
 
     else:
         chi_reduced = 0.
-
 
     return output.beta, output.sd_beta, chi_reduced
 
@@ -76,71 +79,12 @@ def make_hist(image, bins = 2**16):
 
     return counts, edges, width
 
+def vaucouleur(p, x):
+    amp, re = p
+    n = 4
+    return amp * np.exp(-(2*n - 0.324) * (x / re)**(1/n) - 1)
 
-# make_hist(pixel_data)
-#
-# pixel1 = np.multiply(mask1, pixel_data)
-#
-# histy, edges, width = make_hist(pixel1, 2**16)
-# histx = edges + width/2.
-# # ### fit skewed gaussian
-# domain = [np.where(histx > 3350)[0][0], np.where(histx < 3600)[0][-1]]
-# start = domain[0]
-# stop = domain[1]
-#
-# histx_fit = histx[start:stop]
-# histy_fit = histy[start:stop]
-#
-# peak_index = np.where(histy_fit == np.m
-# make_hist(pixel_data)
-#
-# pixel1 = np.multiply(mask1, pixel_data)
-#
-# histy, edges, width = make_hist(pixel1, 2**16)
-# histx = edges + width/2.
-# # ### fit skewed gaussian
-# domain = [np.where(histx > 3350)[0][0], np.where(histx < 3600)[0][-1]]
-# start = domain[0]
-# stop = domain[1]ax(histy_fit))[0][0]
-# mean_guess = histx_fit[peak_index]
-# print(mean_guess)
-# sigma_guess = peak_widths(histy_fit, [peak_index])[0][0]
-# print(sigma_guess)
-# skew_guess = 1.1
-# amp_guess = np.max(histy_fit)
-# print(amp_guess)
-# histx_fit = histx_fit[0:peak_index + 10]
-# histy_fit = histy_fit[0:peak_index + 10]
-#
-#
-# # fit_output = fit(skewgauss, histx_fit, histy_fit, initials = [amp_guess, mean_guess, sigma_guess, skew_guess], args = None, xerr = None, yerr = None)
-#
-# # fit_output = fit(lorentzian, histx_fit, histy_fit, initials = [amp_guess, 3400, sigma_guess], args = None, xerr = None, yerr = None)
-# # fit_output = fit(pearson_iv, histx_fit, histy_fit, initials = [amp_guess, 100, 2., 1.5, mean_guess], args = None, xerr = None, yerr = None)
-# fit_output = fit(gauss, histx_fit, histy_fit, initials = [amp_guess, mean_guess, sigma_guess/5.4], args = None, xerr = None, yerr = np.sqrt(histy_fit))
-#
-# #%%%%%%%%%%%%%%
-#
-#     # amp, alpha, m, v, lam = p
-#
-#
-#
-# xfit = np.linspace(histx_fit[0], histx_fit[-1], 1000)
-# yfit = gauss(fit_output[0], xfit)
-# # yfit = lorentzian([amp_guess, mean_guess, sigma_guess/3], xfit)
-#
-# # yfit = skewgauss([amp_guess/2., mean_guess, sigma_guess, 10], xfit)
-# # yfit = lorentzian(fit_output[0], xfit)
-# # yfit = lorentzian([amp_guess, mean_guess, sigma_guess/2.6], xfit)
-# # yfit = pearson_iv([amp_guess, 1., 0.5, 0., mean_guess], xfit)
-# # yfit = pearson_iv(fit_output[0], xfit)
-#
-#
-# plt.grid(which = 'both')
-#
-# plt.plot(xfit, yfit)
-# # plt.ylim([0, np.max(histy_fit)])
-# plt.xlim([3000, 4000])
-# plt.xlabel('Pixel Values', fontsize = 14)
-# plt.ylabel('Bin Count', fontsize = 14)
-# plt.show()
+def exp_profile(p, x):
+    amp, re = p
+    n = 2
+    return amp * np.exp(-(2*n - 0.324) * (x / re)**(1/n) - 1)
